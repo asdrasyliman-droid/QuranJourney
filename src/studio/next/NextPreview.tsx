@@ -14,7 +14,7 @@ import { WeekRoadmap } from './screens/week'
 import { ReciteJourney } from './screens/recite'
 import { AzkarHome, AzkarList } from './screens/azkar'
 import { DigitalMushaf, MUSHAF_DEFAULT, MushafCtx, type MushafState } from './screens/mushaf'
-import { SAMPLE_PAGES } from '../mushaf/page'
+import { PageSelector } from '../mushaf/nav'
 import type { MobileView } from '../mushaf/mobile'
 import type { Tone } from '../mushaf/desktop'
 import { PALETTES } from '../../lib/theme'
@@ -22,7 +22,7 @@ import { PALETTES } from '../../lib/theme'
 type Page = ScreenId | 'themes' | 'system'
 const PAGES: { id: Page; n: string; en: string; ar: string; note: string }[] = [
   { id: 'home', n: '01', en: 'Unified home', ar: 'رحلتك اليوم', note: 'Three daily journeys (Quran · Azkar by local time · Tadabbur) as one calm trio, then at most four cards: today’s plan tasks, Azkar, an ayah to reflect on (real text, chosen by date) and recent achievements. Rings are computed from the demo plan log, not typed percentages.' },
-  { id: 'mushaf', n: '02', en: 'Digital Mushaf', ar: 'المصحف الرقمي', note: 'The approved Phase 1 Mushaf design, unchanged and hosted here as part of the product (same reader components as #/design-studio/mushaf). Real KFGQPC Hafs text on its Madinah page ranges; page turning moves between the sample pages. “Theme” paper follows the selected palette and Light / Dark / System; Ivory, Sand and Night are the fixed paper tones from the Phase 1 settings. Click an ayah for its menu; on mobile tap the page to hide or show the tools, and use the dock (page pill, listen, Aa).' },
+  { id: 'mushaf', n: '02', en: 'Digital Mushaf', ar: 'المصحف الرقمي', note: 'Opens on a surah / juz index: 114 surah cards (Arabic and English name, meaning, ayah count, Makki/Madani, starting page) and 30 juz with their real start and end, sortable and searchable in Arabic or English. A card opens the approved Phase 1 reader at that exact ayah; its back button returns here. All 604 pages are navigable. Pages are text-rendered — verified KFGQPC Hafs text on Tanzil’s Madinah page ranges, not page images, so lines reflow. Surah names use Amiri (no licensed surah-name font in the project); no revelation-order tab, as the repo has no sourced data for it.' },
   { id: 'ayah', n: '03', en: 'Ayah Journey', ar: 'رحلة الآية', note: 'Vertical snap feed, one ayah per screen (Al-Mulk 1–5, real Hafs text and EveryAyah audio). Four connected experiences: Read & listen, Understand & reflect (verified Tafsir fetched verbatim with book and author, visually separate from the personal journal), Memorise (6 steps; only “أتقنتها” records an ayah as memorised) and Connect ayat (meaning chain, what-comes-next drill, blind recitation). Session intent: memorisation, reflection or both. Desktop keeps the experience in a persistent side panel.' },
   { id: 'map', n: '04', en: 'Quran Journey Map', ar: 'خريطة رحلة القرآن', note: '30 isometric stations on a serpentine road (RTL: starts top-right). Plinth height + glow encode state: leaf = complete, gold = in progress (front strip = real ratio), neutral = not started. Station detail: real Juz range, memorised/total and % computed from demo ayah records.' },
   { id: 'library', n: '05', en: 'Achievements Library', ar: 'مكتبة إنجازاتي', note: 'Isometric bookcase, six shelves × five Juz books. A book lights fully only when every ayah is recorded; in-progress spines fill to the true ratio; untouched books are ghost outlines that “appear” as you begin. No streaks, ranks or comparisons.' },
@@ -172,15 +172,15 @@ function MushafControls({ s, set, device }: { s: MushafState; set: (p: Partial<M
   const views: [MobileView, string][] = [['reading', 'Reading'], ['immersive', 'Immersive'], ['playing', 'Playing'], ['ayah', 'Ayah'], ['nav', 'Go to'], ['settings', 'Settings']]
   return (
     <div className="grid grid-cols-[auto_auto] items-center justify-start gap-x-3 gap-y-2.5 text-[12px] text-black/50">
+      <span>Screen</span>
+      <span><Seg v={s.stage} set={(stage: MushafState['stage']) => set({ stage })} opts={[['index', 'Surah / Juz index'], ['reader', 'Reader']]} /></span>
       <span>Paper</span>
       <span><Seg v={s.tone} set={(tone: Tone) => set({ tone })} opts={[['app', 'Theme'], ['ivory', 'Ivory'], ['sand', 'Sand'], ['night', 'Night']]} /></span>
-      <span>Sample page</span>
-      <span className="inline-flex flex-wrap gap-1">
-        {SAMPLE_PAGES.map((p) => (
-          <button key={p} type="button" onClick={() => set({ pg: p })} aria-pressed={p === s.pg} className={`h-8 min-w-8 rounded-full px-2.5 text-[13px] tabular-nums ${p === s.pg ? 'bg-[#16181d] font-semibold text-white' : 'bg-black/[.05] text-black/65 hover:bg-black/[.09]'}`}>{p}</button>
-        ))}
-      </span>
-      {device !== 'desktop' && (
+      <span>Page</span>
+      <PageSelector pg={s.pg} onGo={(pg) => set({ pg })} />
+      <span>Rendering</span>
+      <span className="text-[11.5px] leading-relaxed text-black/55">Text-rendered from verified KFGQPC Hafs + Tanzil page ranges · not page images · lines reflow (no line-level layout data)</span>
+      {device !== 'desktop' && s.stage === 'reader' && (
         <>
           <span>Mobile state</span>
           <span><Seg v={s.view} set={(view: MobileView) => set({ view })} opts={views} /></span>

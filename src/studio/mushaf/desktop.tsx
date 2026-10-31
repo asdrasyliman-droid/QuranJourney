@@ -1,7 +1,8 @@
 // Desktop Mushaf reader mock (design preview only; local UI state, no app logic).
-import { useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { I } from '../kit'
-import { MushafPage, PageNumber, PageSkeleton, PageText, SAMPLE_PAGES, SurahBanner, juzName, surahName, toAr, usePage, type PageData } from './page'
+import { MushafPage, PageNumber, PageSkeleton, PageText, SurahBanner, TOTAL_PAGES, clampPage, juzName, parsePage, surahName, toAr, useFocus, usePage, type Focus, type PageData } from './page'
+import { NavPanel, type NavTab } from './nav'
 import { BISMILLAH_HAFS } from '../../lib/quran'
 
 export type Mode = 'mushaf' | 'ayah' | 'flow'
@@ -51,16 +52,16 @@ export function JumpControl({ pg, onGo }: { pg: number; onGo: (n: number) => voi
   const [v, setV] = useState('')
   const [hint, setHint] = useState(false)
   const go = () => {
-    const n = Number(v.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))))
-    if (SAMPLE_PAGES.includes(n)) (onGo(n), setV(''), setHint(false))
+    const n = parsePage(v)
+    if (n) (onGo(n), setV(''), setHint(false))
     else setHint(true)
   }
   return (
     <form onSubmit={(e) => (e.preventDefault(), go())} className="relative flex items-center gap-1 rounded-full bg-(--ui-ink)/[.05] p-1 ps-4">
       <label className="text-[12.5px] text-(--ui-muted)" htmlFor="mp-jump">انتقال إلى</label>
-      <input id="mp-jump" inputMode="numeric" value={v} onChange={(e) => setV(e.target.value)} placeholder={toAr(pg)} className="h-8 w-14 rounded-full bg-(--ui-card) text-center text-[14px] font-semibold text-(--ui-ink) outline-none ring-1 ring-(--ui-line) placeholder:text-(--ui-muted)/60 focus:ring-2 focus:ring-(--accent)" />
+      <input id="mp-jump" inputMode="numeric" value={v} onChange={(e) => (setV(e.target.value), setHint(false))} placeholder={toAr(pg)} aria-invalid={hint} className="h-8 w-14 rounded-full bg-(--ui-card) text-center text-[14px] font-semibold text-(--ui-ink) outline-none ring-1 ring-(--ui-line) placeholder:text-(--ui-muted)/60 focus:ring-2 focus:ring-(--accent)" />
       <button type="submit" className="mp-press h-8 rounded-full bg-(--ui-ink) px-3.5 text-[12.5px] font-semibold text-(--ui-bg)">اذهب</button>
-      {hint && <span className="absolute -top-8 start-0 whitespace-nowrap rounded-full bg-(--ui-ink) px-3 py-1 text-[11.5px] text-(--ui-bg)">المعاينة: {SAMPLE_PAGES.map(toAr).join('، ')}</span>}
+      {hint && <span role="alert" className="absolute -top-8 start-0 whitespace-nowrap rounded-full bg-(--ui-ink) px-3 py-1 text-[11.5px] text-(--ui-bg)">أدخل رقم صفحة من ١ إلى ٦٠٤</span>}
     </form>
   )
 }
@@ -110,21 +111,21 @@ export function AyahMenu({ s, a, style, caret = 'bottom', onClose }: { s: number
   )
 }
 
-function Toolbar({ d, mode, setMode, bookmarked, setBookmarked, settings, setSettings, onBack }: { d: PageData | null; mode: Mode; setMode: (m: Mode) => void; bookmarked: boolean; setBookmarked: (b: boolean) => void; settings: boolean; setSettings: (b: boolean) => void; onBack?: () => void }) {
+function Toolbar({ d, mode, setMode, bookmarked, setBookmarked, settings, setSettings, onBack, onNav }: { d: PageData | null; mode: Mode; setMode: (m: Mode) => void; bookmarked: boolean; setBookmarked: (b: boolean) => void; settings: boolean; setSettings: (b: boolean) => void; onBack?: () => void; onNav: (t: NavTab) => void }) {
   return (
     <header className="mp-glass relative z-30 flex h-16 shrink-0 items-center gap-4 px-5" style={{ borderRadius: 0 }}>
       <div className="flex min-w-[260px] items-center gap-2">
         <IconBtn n="chevron" label="رجوع" onClick={onBack} />
-        <div className="leading-tight">
-          <p className="text-[15px] font-semibold">{d ? surahName(d.surahs[0]) : '—'}</p>
+        <button type="button" onClick={() => onNav('surah')} title="الانتقال إلى سورة" className="mp-press -mx-2 rounded-[12px] px-2 py-1 text-start leading-tight hover:bg-(--ui-ink)/[.05]">
+          <p className="text-[15px] font-semibold">{d ? d.surahs.map(surahName).join('، ') : '—'}</p>
           <p className="text-[12px] text-(--ui-muted)">{d ? `${juzName(d.juz)} · الحزب ${toAr(d.hizb)}` : ''}</p>
-        </div>
+        </button>
       </div>
       <div className="flex flex-1 justify-center">
         <ModeSwitch mode={mode} onChange={setMode} />
       </div>
       <div className="flex min-w-[260px] items-center justify-end gap-1">
-        <IconBtn n="search" label="بحث" />
+        <IconBtn n="search" label="الانتقال إلى سورة أو جزء أو صفحة" onClick={() => onNav('surah')} />
         <IconBtn n="volume" label="استماع" />
         <IconBtn n="bookmark" label="علامة مرجعية" on={bookmarked} onClick={() => setBookmarked(!bookmarked)} />
         <IconBtn n="type" label="إعدادات القراءة" on={settings} onClick={() => setSettings(!settings)} />
@@ -191,17 +192,23 @@ function Toggle({ l, on: init = false }: { l: string; on?: boolean }) {
   )
 }
 
-export function DesktopReader({ pg, setPg, tone, setTone, auto, onBack }: { pg: number; setPg: (n: number) => void; tone: Tone; setTone: (t: Tone) => void; auto?: boolean; onBack?: () => void }) {
+export function DesktopReader({ pg, setPg, tone, setTone, auto, onBack, focus: focusIn }: { pg: number; setPg: (n: number) => void; tone: Tone; setTone: (t: Tone) => void; auto?: boolean; onBack?: () => void; focus?: Focus }) {
   const d = usePage(pg)
-  const next = usePage(Math.min(604, pg + 1))
+  const next = usePage(Math.min(TOTAL_PAGES, pg + 1))
   const [mode, setMode] = useState<Mode>('mushaf')
   const [size, setSize] = useState(1)
   const [bookmarked, setBookmarked] = useState(false)
   const [settings, setSettings] = useState(false)
+  const [nav, setNav] = useState<NavTab | null>(null)
+  const [focus, setFocus] = useState<Focus | null>(focusIn ?? null)
+  // A host (e.g. the surah index) can open the reader at an exact ayah.
+  useEffect(() => void (focusIn && setFocus(focusIn)), [focusIn])
   const [sel, setSel] = useState<{ s: number; a: number; x: number; y: number } | null>(null)
   const area = useRef<HTMLDivElement>(null)
-  const i = SAMPLE_PAGES.indexOf(pg)
-  const go = (n: number) => (setPg(n), setSel(null))
+  const flash = useFocus(area, d, focus)
+  const first = pg <= 1
+  const last = pg >= TOTAL_PAGES
+  const go = (n: number, f?: Focus) => (setPg(clampPage(n)), setFocus(f ?? null), setSel(null), setNav(null))
 
   const onAyah = (s: number, a: number, el: HTMLElement) => {
     const box = area.current!
@@ -210,26 +217,36 @@ export function DesktopReader({ pg, setPg, tone, setTone, auto, onBack }: { pg: 
     const b = box.getBoundingClientRect()
     setSel({ s, a, x: (r.left + r.width / 2 - b.left) / k, y: (r.top - b.top) / k + box.scrollTop })
   }
-  const marks = sel ? { state: { [`${sel.s}:${sel.a}`]: 'selected' as const } } : undefined
+  const marks = sel || flash ? { state: { ...(flash ? { [flash]: 'selected' as const } : {}), ...(sel ? { [`${sel.s}:${sel.a}`]: 'selected' as const } : {}) } } : undefined
 
   return (
     <div className="mp-canvas relative flex h-full flex-col" dir="rtl">
-      <Toolbar d={d} mode={mode} setMode={(m) => (setMode(m), setSel(null))} bookmarked={bookmarked} setBookmarked={setBookmarked} settings={settings} setSettings={setSettings} onBack={onBack} />
+      <Toolbar d={d} mode={mode} setMode={(m) => (setMode(m), setSel(null))} bookmarked={bookmarked} setBookmarked={setBookmarked} settings={settings} setSettings={(b) => (setSettings(b), setNav(null))} onBack={onBack} onNav={(t) => (setNav(nav ? null : t), setSettings(false))} />
       <div ref={area} className="mp-scroll relative min-h-0 flex-1 overflow-y-auto" onClick={(e) => e.target === e.currentTarget && setSel(null)}>
         {mode === 'mushaf' && (
           <div className="flex items-center justify-center gap-10 px-10 py-7" onClick={(e) => e.target === e.currentTarget && setSel(null)}>
-            <TurnBtn dir="prev" disabled={i <= 0} onClick={() => go(SAMPLE_PAGES[i - 1])} />
+            <TurnBtn dir="prev" disabled={first} onClick={() => go(pg - 1)} />
             <div className="w-[640px] shrink-0">
               {d ? <MushafPage d={d} size={22 * size} marks={marks} ribbon={bookmarked} onAyah={onAyah} /> : <PageSkeleton />}
             </div>
-            <TurnBtn dir="next" disabled={i >= SAMPLE_PAGES.length - 1} onClick={() => go(SAMPLE_PAGES[i + 1])} />
+            <TurnBtn dir="next" disabled={last} onClick={() => go(pg + 1)} />
           </div>
         )}
-        {mode === 'ayah' && d && <AyahList d={d} size={size} sel={sel} onPick={(s, a) => setSel(sel?.a === a && sel.s === s ? null : { s, a, x: 0, y: 0 })} />}
-        {mode === 'flow' && d && <Flow pages={[d, next]} size={size} marks={marks} onAyah={onAyah} />}
+        {mode === 'ayah' && d && <AyahList d={d} size={size} sel={sel ?? (flash ? { s: Number(flash.split(':')[0]), a: Number(flash.split(':')[1]), x: 0, y: 0 } : null)} onPick={(s, a) => setSel(sel?.a === a && sel.s === s ? null : { s, a, x: 0, y: 0 })} />}
+        {mode === 'flow' && d && <Flow pages={last ? [d] : [d, next]} size={size} marks={marks} onAyah={onAyah} />}
 
         {sel && mode !== 'ayah' && <AyahMenu s={sel.s} a={sel.a} onClose={() => setSel(null)} style={{ left: Math.max(12, Math.min(sel.x - 165, (area.current?.offsetWidth ?? 1200) - 342)), top: Math.max(8, sel.y - 128) }} />}
       </div>
+
+      {nav && (
+        <div className="mp-glass absolute start-5 top-[76px] z-40 w-[400px] rounded-[26px] p-5" role="dialog" aria-label="الانتقال في المصحف">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-[16px] font-semibold">الانتقال في المصحف</h3>
+            <IconBtn n="x" label="إغلاق" size={32} onClick={() => setNav(null)} />
+          </div>
+          <NavPanel pg={pg} d={d} onGo={go} initial={nav} listH={360} />
+        </div>
+      )}
 
       {settings && (
         <div className="mp-glass absolute end-5 top-[76px] z-40 w-[360px] rounded-[26px] p-5" style={{ transformOrigin: 'top left' }}>
@@ -256,16 +273,16 @@ export function DesktopReader({ pg, setPg, tone, setTone, auto, onBack }: { pg: 
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button type="button" disabled={i <= 0} onClick={() => go(SAMPLE_PAGES[i - 1])} className="mp-press flex h-10 items-center gap-1.5 rounded-full px-4 text-[13.5px] font-medium text-(--ui-ink) ring-1 ring-(--ui-line) hover:bg-(--ui-ink)/[.04] disabled:opacity-35">
+          <button type="button" disabled={first} onClick={() => go(pg - 1)} className="mp-press flex h-10 items-center gap-1.5 rounded-full px-4 text-[13.5px] font-medium text-(--ui-ink) ring-1 ring-(--ui-line) hover:bg-(--ui-ink)/[.04] disabled:opacity-35">
             <I n="chevron" s={16} />
             السابقة
           </button>
-          <button type="button" disabled={i >= SAMPLE_PAGES.length - 1} onClick={() => go(SAMPLE_PAGES[i + 1])} className="mp-press flex h-10 items-center gap-1.5 rounded-full bg-(--ui-ink) px-4 text-[13.5px] font-semibold text-(--ui-bg) disabled:opacity-35">
+          <button type="button" disabled={last} onClick={() => go(pg + 1)} className="mp-press flex h-10 items-center gap-1.5 rounded-full bg-(--ui-ink) px-4 text-[13.5px] font-semibold text-(--ui-bg) disabled:opacity-35">
             التالية
             <I n="chevron" s={16} className="rotate-180" />
           </button>
         </div>
-        <JumpControl pg={pg} onGo={go} />
+        <JumpControl pg={pg} onGo={(n) => go(n)} />
       </footer>
     </div>
   )
@@ -275,7 +292,7 @@ function AyahList({ d, size, sel, onPick }: { d: PageData; size: number; sel: { 
   return (
     <div className="mx-auto max-w-[780px] space-y-3 px-6 py-7">
       {d.blocks.map((b) => (
-        <div key={b.s} className="space-y-3">
+        <div key={b.s} className="space-y-3" data-block={b.s}>
           {b.header && (
             <div className="mp-paper rounded-[22px] px-8 py-4">
               <SurahBanner s={b.s} />
@@ -285,7 +302,7 @@ function AyahList({ d, size, sel, onPick }: { d: PageData; size: number; sel: { 
           {b.ayat.map(({ a, t }) => {
             const on = sel?.s === b.s && sel.a === a
             return (
-              <article key={a} onClick={() => onPick(b.s, a)} className={`mp-paper cursor-pointer rounded-[22px] px-7 pb-3 pt-5 transition-shadow ${on ? 'ring-2 ring-(--accent)' : ''}`} style={{ boxShadow: on ? undefined : '0 1px 0 rgba(255,255,255,.6) inset, 0 10px 24px -18px rgba(60,45,15,.4)' }}>
+              <article key={a} data-k={`${b.s}:${a}`} onClick={() => onPick(b.s, a)} className={`mp-paper cursor-pointer rounded-[22px] px-7 pb-3 pt-5 transition-shadow ${on ? 'ring-2 ring-(--accent)' : ''}`} style={{ boxShadow: on ? undefined : '0 1px 0 rgba(255,255,255,.6) inset, 0 10px 24px -18px rgba(60,45,15,.4)' }}>
                 <p className="mp-text" style={{ fontSize: 25 * size, lineHeight: 2.05, textAlign: 'right', textAlignLast: 'right' }}>
                   {t} <span className="mp-num">{toAr(a)}</span>
                 </p>

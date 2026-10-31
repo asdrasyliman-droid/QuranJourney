@@ -1,37 +1,77 @@
 // Design-only Mushaf page for the Phase 1 preview. Reads the verified KFGQPC
 // Hafs text and Tanzil page metadata through the existing public helpers in
-// lib/quran (read-only); nothing here is used by the production reader.
-import { useEffect, useState, type ReactNode } from 'react'
-import { BISMILLAH_HAFS, PAGES, hasBismillahHeader, hizbOf, juzOf, loadHafs, pageEnd, surah, toAr } from '../../lib/quran'
+// lib/quran and lib/usePage (read-only); nothing here is used by the production
+// reader. Pages are text-rendered: Tanzil says which ayat sit on each of the 604
+// Madinah pages, but there is no line-level layout data or page imagery, so the
+// lines reflow and justify rather than reproducing the printed 15-line page.
+import { useEffect, useState, type ReactNode, type RefObject } from 'react'
+import { BISMILLAH_HAFS, JUZ, SURAHS, pageOf, surah, toAr } from '../../lib/quran'
+import { TOTAL_PAGES, clampPage, loadPage } from '../../lib/usePage'
 
 export type Block = { s: number; header: boolean; bism: boolean; ayat: { a: number; t: string }[] }
-export type PageData = { pg: number; blocks: Block[]; juz: number; hizb: number; quarter: number; surahs: number[] }
+/** `hafs` is false only if a KFGQPC file failed to load and the Tanzil text was used instead. */
+export type PageData = { pg: number; blocks: Block[]; juz: number; hizb: number; quarter: number; surahs: number[]; hafs: boolean }
 
-/** Curated real pages for the preview (not the production 604-page navigator). */
-export const SAMPLE_PAGES = [1, 2, 3, 50, 262, 582, 604]
+export { TOTAL_PAGES, clampPage }
 
+/** Reads a page number typed with Arabic-Indic, Persian or Latin digits; null unless 1–604. */
+export function parsePage(v: string): number | null {
+  const t = v.trim().replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x660)).replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x6f0))
+  if (!/^\d{1,3}$/.test(t)) return null
+  const n = Number(t)
+  return n >= 1 && n <= TOTAL_PAGES ? n : null
+}
+
+/** An exact position to bring into view after navigating (start of a surah or juz). */
+export type Focus = { s: number; a: number }
+export type Go = (pg: number, focus?: Focus) => void
+export const surahStart = (s: number) => ({ pg: pageOf(s, 1), focus: { s, a: 1 } })
+export const juzStart = (j: number) => {
+  const [s, a] = JUZ[j - 1]
+  return { pg: pageOf(s, a), focus: { s, a } }
+}
+export { SURAHS }
+
+/** One page of verified text via the production page loader (cached, neighbours prefetched). */
 export function usePage(pg: number): PageData | null {
   const [d, setD] = useState<PageData | null>(null)
   useEffect(() => {
     let live = true
-    const [s0, a0] = PAGES[pg - 1]
-    const [s1, a1] = pageEnd(pg)
-    const ss = Array.from({ length: s1 - s0 + 1 }, (_, i) => s0 + i)
-    Promise.all(ss.map((s) => loadHafs(s))).then((all) => {
-      if (!live) return
-      const blocks = ss.map((s, i) => {
-        const from = s === s0 ? a0 : 1
-        const to = s === s1 ? a1 : surah(s).ayat
-        return { s, header: from === 1, bism: from === 1 && hasBismillahHeader(s), ayat: all[i].slice(from - 1, to).map((t, k) => ({ a: from + k, t })) }
-      })
-      const h = hizbOf(s0, a0)
-      setD({ pg, blocks, juz: juzOf(s0, a0), hizb: h.hizb, quarter: h.quarter, surahs: ss })
-    })
+    const n = clampPage(pg)
+    loadPage(n)
+      .then((p) => live && setD({ pg: p.pg, blocks: p.blocks, juz: p.juz, hizb: p.hizb, quarter: p.quarter, surahs: p.blocks.map((b) => b.s), hafs: p.hafs }))
+      .catch(() => {})
+    if (n < TOTAL_PAGES) void loadPage(n + 1).catch(() => {})
+    if (n > 1) void loadPage(n - 1).catch(() => {})
     return () => {
       live = false
     }
   }, [pg])
-  return d
+  // Never show a stale page while the next one loads.
+  return d && d.pg === clampPage(pg) ? d : null
+}
+
+/**
+ * After a page turn, scroll the reading area to the top; after a surah/juz jump,
+ * scroll to that exact ayah (or surah title) and briefly mark it. Returns the key to mark.
+ */
+export function useFocus(area: RefObject<HTMLElement | null>, d: PageData | null, focus: Focus | null): string | null {
+  const [flash, setFlash] = useState<string | null>(null)
+  useEffect(() => {
+    const box = area.current
+    if (!box || !d) return
+    const k = focus && `${focus.s}:${focus.a}`
+    const el = k ? box.querySelector<HTMLElement>(`[data-k="${k}"]`) : null
+    if (!el) return void box.scrollTo({ top: 0 })
+    const target = focus!.a === 1 ? (el.closest<HTMLElement>('[data-block]') ?? el) : el
+    const top = target.getBoundingClientRect().top - box.getBoundingClientRect().top
+    const k2 = box.getBoundingClientRect().height / box.offsetHeight || 1
+    box.scrollTo({ top: Math.max(0, box.scrollTop + top / k2 - 24) })
+    setFlash(k)
+    const t = setTimeout(() => setFlash(null), 2200)
+    return () => clearTimeout(t)
+  }, [d, focus, area])
+  return flash
 }
 
 const JUZ_AR = ['الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر', 'الحادي عشر', 'الثاني عشر', 'الثالث عشر', 'الرابع عشر', 'الخامس عشر', 'السادس عشر', 'السابع عشر', 'الثامن عشر', 'التاسع عشر', 'العشرون', 'الحادي والعشرون', 'الثاني والعشرون', 'الثالث والعشرون', 'الرابع والعشرون', 'الخامس والعشرون', 'السادس والعشرون', 'السابع والعشرون', 'الثامن والعشرون', 'التاسع والعشرون', 'الثلاثون']
@@ -95,19 +135,21 @@ export function Bookmark({ className = '' }: { className?: string }) {
 
 /** Verified Quran text block for one page (no line-level layout data exists, so lines flow and justify). */
 export function PageText({ d, size, marks = {}, onAyah }: { d: PageData; size: number; marks?: Marks; onAyah?: (s: number, a: number, el: HTMLElement) => void }) {
+  // Tanzil fallback text must not be drawn with the KFGQPC-specific face.
+  const ff = d.hafs ? undefined : "'Rafiqi Quran', 'Amiri Quran', serif"
   return (
     <div className="flex flex-col">
       {d.blocks.map((b) => (
-        <div key={b.s}>
+        <div key={b.s} data-block={b.s}>
           {b.header && <SurahBanner s={b.s} compact={size < 22} />}
           {b.bism && (
-            <p className="mp-text mb-1 text-center" style={{ fontSize: size, lineHeight: 2 }}>
+            <p className="mp-text mb-1 text-center" style={{ fontSize: size, lineHeight: 2, fontFamily: ff }}>
               {BISMILLAH_HAFS}
             </p>
           )}
-          <p className="mp-text" style={{ fontSize: size, lineHeight: size < 22 ? 2.05 : 2 }}>
+          <p className="mp-text" style={{ fontSize: size, lineHeight: size < 22 ? 2.05 : 2, fontFamily: ff }}>
             {b.ayat.map(({ a, t }) => (
-              <Ayah key={a} state={marks.state?.[key(b.s, a)]} onClick={onAyah && ((el) => onAyah(b.s, a, el))}>
+              <Ayah key={a} k={key(b.s, a)} state={marks.state?.[key(b.s, a)]} onClick={onAyah && ((el) => onAyah(b.s, a, el))}>
                 {t} <span className="mp-num">{toAr(a)}</span>
                 {marks.bookmark === key(b.s, a) && <BookmarkDot />}
               </Ayah>
@@ -119,10 +161,10 @@ export function PageText({ d, size, marks = {}, onAyah }: { d: PageData; size: n
   )
 }
 
-function Ayah({ state, children, onClick }: { state?: AyahState; children: ReactNode; onClick?: (el: HTMLElement) => void }) {
+function Ayah({ k, state, children, onClick }: { k: string; state?: AyahState; children: ReactNode; onClick?: (el: HTMLElement) => void }) {
   return (
     <>
-      <span className="mp-ayah" data-state={state} onClick={onClick && ((e) => onClick(e.currentTarget))}>
+      <span className="mp-ayah" data-k={k} data-state={state} onClick={onClick && ((e) => onClick(e.currentTarget))}>
         {children}
       </span>{' '}
     </>

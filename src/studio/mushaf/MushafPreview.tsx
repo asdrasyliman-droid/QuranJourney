@@ -7,7 +7,8 @@ import './mushaf-preview.css'
 import { I } from '../kit'
 import { AyahMenu, DesktopReader, IconBtn, JumpControl, ModeSwitch, Progress, TurnBtn, type Mode, type Tone } from './desktop'
 import { MobileReader } from './mobile'
-import { Bookmark, PageNumber, PageText, Rosette, SAMPLE_PAGES, SurahBanner, toAr, usePage, type Marks, type PageData } from './page'
+import { PageSelector } from './nav'
+import { Bookmark, PageNumber, PageText, Rosette, SurahBanner, toAr, usePage, type Marks, type PageData } from './page'
 
 /** Scales a fixed-size artboard to the available width (keeps true proportions). */
 function Fit({ w, h, children }: { w: number; h: number; children: ReactNode }) {
@@ -103,7 +104,7 @@ export default function MushafPreview() {
             <h1 className="mt-3 text-[40px] font-semibold leading-[1.05] tracking-[-.02em] md:text-[52px]">Digital Mushaf</h1>
             <p className="mt-1 text-[18px] text-black/60" dir="rtl" style={{ fontFamily: "'IBM Plex Sans Arabic'" }}>تجربة المصحف الرقمي · مستوحاة من مصحف المدينة</p>
             <p className="mt-4 max-w-[680px] text-[15px] leading-relaxed text-black/65">
-              A paper-like page with a fine traditional frame, the KFGQPC Hafs typeface, and quiet Sakina chrome that stays out of the way. The Quran text below is the project&apos;s verified KFGQPC Hafs edition, placed on its real Madinah page ranges (Tanzil metadata). Controls are mock-ups: page turning only moves between a few sample pages.
+              A paper-like page with a fine traditional frame, the KFGQPC Hafs typeface, and quiet Sakina chrome that stays out of the way. The Quran text below is the project&apos;s verified KFGQPC Hafs edition, placed on its real Madinah page ranges (Tanzil metadata). All 604 pages, 114 surahs and 30 juz are navigable. Pages are text-rendered: Tanzil metadata decides which ayat sit on each Madinah page, but there is no line-level layout data or page imagery, so lines reflow and do not reproduce the printed 15-line page. Other reader actions (listen, tafsir, bookmark) are visual mock-ups.
             </p>
           </div>
           <div className="flex flex-col items-end gap-3">
@@ -112,13 +113,9 @@ export default function MushafPreview() {
               <Seg v={tone} set={setTone} opts={[['ivory', 'Ivory'], ['sand', 'Sand'], ['night', 'Night']]} />
             </div>
             <div className="flex items-center gap-3 text-[12px] text-black/50">
-              Sample page
-              <div className="inline-flex flex-wrap gap-1">
-                {SAMPLE_PAGES.map((p) => (
-                  <button key={p} type="button" onClick={() => setPg(p)} className={`mp-press h-8 min-w-8 rounded-full px-2.5 text-[13px] tabular-nums ${p === pg ? 'bg-[#16181d] font-semibold text-white' : 'bg-black/[.05] text-black/65 hover:bg-black/[.09]'}`}>{p}</button>
-                ))}
-              </div>
-            </div>
+              Page
+              <PageSelector pg={pg} onGo={setPg} />
+                        </div>
           </div>
         </header>
 
@@ -138,9 +135,9 @@ export default function MushafPreview() {
         <Section n="B" title="Mobile reader" ar="القارئ على الجوال" note="Designed for one hand: one page at a time with full-width paper and a thinner frame, a 17px Hafs text size, and a bottom dock in thumb reach (page turn, page pill, listen, text settings). Immersive mode hides all chrome.">
           <div className="mp-scroll -mx-6 overflow-x-auto px-6 pb-6">
             <div className="flex min-w-max gap-12 px-3 pt-3">
-              <MobileReader pg={pg} view="reading" tone={tone} setTone={setTone} label="القراءة مع الأدوات" />
-              <MobileReader pg={pg} view="immersive" tone={tone} setTone={setTone} label="وضع التركيز (بلا أدوات)" />
-              <MobileReader pg={pg} view="playing" tone={tone} setTone={setTone} label="أثناء التلاوة" />
+              <MobileReader pg={pg} view="reading" tone={tone} setTone={setTone} onPg={setPg} label="القراءة مع الأدوات" />
+              <MobileReader pg={pg} view="immersive" tone={tone} setTone={setTone} onPg={setPg} label="وضع التركيز (بلا أدوات)" />
+              <MobileReader pg={pg} view="playing" tone={tone} setTone={setTone} onPg={setPg} label="أثناء التلاوة" />
             </div>
           </div>
         </Section>
@@ -174,9 +171,9 @@ export default function MushafPreview() {
           )}
           <div className="mp-scroll -mx-6 mt-12 overflow-x-auto px-6 pb-6">
             <div className="flex min-w-max gap-12 px-3 pt-3">
-              <MobileReader pg={pg} view="ayah" tone={tone} setTone={setTone} label="خيارات الآية · لوحة سفلية" />
-              <MobileReader pg={pg} view="nav" tone={tone} setTone={setTone} label="لوحة الانتقال · صفحة / سورة / جزء" />
-              <MobileReader pg={pg} view="settings" tone={tone} setTone={setTone} label="إعدادات القراءة" />
+              <MobileReader pg={pg} view="ayah" tone={tone} setTone={setTone} onPg={setPg} label="خيارات الآية · لوحة سفلية" />
+              <MobileReader pg={pg} view="nav" tone={tone} setTone={setTone} onPg={setPg} label="لوحة الانتقال · صفحة / سورة / جزء" />
+              <MobileReader pg={pg} view="settings" tone={tone} setTone={setTone} onPg={setPg} label="إعدادات القراءة" />
             </div>
           </div>
         </Section>

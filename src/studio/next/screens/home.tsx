@@ -1,5 +1,6 @@
 // رحلتك اليوم — unified home dashboard (design preview).
-import { useEffect, useState, type ReactNode } from 'react'
+import { useContext, useEffect, useState, type ReactNode } from 'react'
+import { MushafCtx } from './mushaf'
 import { Chrome, Demo, Icon, toAr, useDevice, useProto } from '../core'
 import { JUZ_INFO, azkarTitle, timeOfDay, weekLog } from '../data'
 import { weekOrder } from '../../../components/PlanParts'
@@ -30,6 +31,7 @@ function Ring({ v, color, size = 64, children }: { v: number; color: string; siz
 export function HomeDashboard() {
   const device = useDevice()
   const { go } = useProto()
+  const mushaf = useContext(MushafCtx)
   const today = weekLog(new Date().getDay(), weekOrder('ar')).find((x) => x.today)!
   const qDone = today.tasks.reduce((n, t) => n + Math.min(t.done, t.total), 0)
   const qTotal = today.tasks.reduce((n, t) => n + t.total, 0)
@@ -86,7 +88,7 @@ export function HomeDashboard() {
       </ul>
       <div className="mt-4 grid grid-cols-2 gap-2">
         <button type="button" onClick={() => go('ayah')} className="press flex h-11 items-center justify-center gap-1.5 rounded-full bg-night text-[13px] font-semibold text-parchment"><Icon name="sprout" size={16} />تابع الحفظ</button>
-        <button type="button" onClick={() => go('mushaf')} className="press flex h-11 items-center justify-center gap-1.5 rounded-full bg-gold-soft text-[13px] font-semibold"><Icon name="book" size={16} />تابع القراءة في المصحف</button>
+        <button type="button" onClick={() => (mushaf.set({ stage: 'reader' }), go('mushaf'))} className="press flex h-11 items-center justify-center gap-1.5 rounded-full bg-gold-soft text-[13px] font-semibold"><Icon name="book" size={16} />تابع القراءة في المصحف</button>
       </div>
       <p className="mt-3 text-[11.5px] text-muted">آخر قراءة: سورة الكهف · ص ٢٩٥ (تجريبي)</p>
     </Card>
