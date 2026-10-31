@@ -1,0 +1,12 @@
+/* Next-generation preview helpers (design only; scoped to .pv-root frames). */
+.iso-halo { opacity: 0.32; }
+.pv-root[data-theme='dark'] .iso-halo { opacity: 0.62; }
+.iso-hit { cursor: pointer; }
+.iso-hit:focus-visible { outline: none; }
+.iso-hit:focus-visible .iso-focus { stroke: var(--color-night); stroke-width: 2; }
+.iso-hit .iso-lift { transition: transform 220ms cubic-bezier(0.2, 0.9, 0.25, 1); }
+@media (hover: hover) { .iso-hit:hover .iso-lift { transform: translateY(-3px); } }
+.iso-hit[aria-pressed='true'] .iso-lift { transform: translateY(-5px); }
+@media (prefers-reduced-motion: reduce) { .iso-hit .iso-lift { transition: none; transform: none !important; } }
+@media (prefers-reduced-transparency: reduce) { .iso-halo { display: none; } }
+.pv-snap { scroll-snap-type: y mandatory; }
