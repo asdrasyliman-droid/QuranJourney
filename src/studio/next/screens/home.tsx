@@ -86,7 +86,7 @@ export function HomeDashboard() {
       </ul>
       <div className="mt-4 grid grid-cols-2 gap-2">
         <button type="button" onClick={() => go('ayah')} className="press flex h-11 items-center justify-center gap-1.5 rounded-full bg-night text-[13px] font-semibold text-parchment"><Icon name="sprout" size={16} />تابع الحفظ</button>
-        <button type="button" className="press flex h-11 items-center justify-center gap-1.5 rounded-full bg-gold-soft text-[13px] font-semibold"><Icon name="book" size={16} />تابع القراءة</button>
+        <a href="#/design-studio/mushaf" onClick={() => scrollTo({ top: 0 })} title="يفتح معاينة المصحف الرقمي" className="press flex h-11 items-center justify-center gap-1.5 rounded-full bg-gold-soft text-[13px] font-semibold"><Icon name="book" size={16} />تابع القراءة في المصحف</a>
       </div>
       <p className="mt-3 text-[11.5px] text-muted">آخر قراءة: سورة الكهف · ص ٢٩٥ (تجريبي)</p>
     </Card>

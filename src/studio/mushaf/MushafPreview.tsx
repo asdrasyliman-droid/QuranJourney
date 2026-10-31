@@ -8,6 +8,7 @@ import { I } from '../kit'
 import { AyahMenu, DesktopReader, IconBtn, JumpControl, ModeSwitch, Progress, TurnBtn, type Mode, type Tone } from './desktop'
 import { MobileReader } from './mobile'
 import { Bookmark, PageNumber, PageText, Rosette, SAMPLE_PAGES, SurahBanner, toAr, usePage, type Marks, type PageData } from './page'
+import { PreviewSwitch } from '../PreviewSwitch'
 
 /** Scales a fixed-size artboard to the available width (keeps true proportions). */
 function Fit({ w, h, children }: { w: number; h: number; children: ReactNode }) {
@@ -92,7 +93,10 @@ export default function MushafPreview() {
       <div className="mx-auto max-w-[1440px] px-6 pb-28 pt-10 md:px-10">
         <header className="flex flex-wrap items-end justify-between gap-6 border-b border-black/10 pb-8">
           <div>
-            <a href="#/design-studio" className="text-[12px] font-medium text-black/50 hover:text-black">← Design Studio</a>
+            <div className="flex flex-wrap items-center gap-4">
+              <a href="#/design-studio" className="text-[12px] font-medium text-black/50 hover:text-black">← Design Studio</a>
+              <PreviewSwitch current="mushaf" />
+            </div>
             <div className="mt-3 flex items-center gap-3">
               <span className="rounded-full bg-[#dcefe2] px-2.5 py-1 text-[11px] font-semibold tracking-wide text-[#2f7d4f]">PHASE 1 · DESIGN PREVIEW</span>
               <span className="rounded-full bg-black/[.05] px-2.5 py-1 text-[11px] font-medium text-black/55">Not connected to the app</span>

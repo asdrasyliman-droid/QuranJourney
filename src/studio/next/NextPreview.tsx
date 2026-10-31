@@ -14,6 +14,7 @@ import { WeekRoadmap } from './screens/week'
 import { ReciteJourney } from './screens/recite'
 import { AzkarHome, AzkarList } from './screens/azkar'
 import { PALETTES } from '../../lib/theme'
+import { MUSHAF_HREF, PreviewSwitch, toTop } from '../PreviewSwitch'
 
 type Page = ScreenId | 'themes' | 'system'
 const PAGES: { id: Page; n: string; en: string; ar: string; note: string }[] = [
@@ -81,7 +82,10 @@ export default function NextPreview() {
       <header className="sticky top-0 z-40 border-b border-black/10 bg-[#f4f3ef]/90 backdrop-blur">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-6 gap-y-3 px-6 py-4">
           <div className="min-w-0">
-            <a href="#/design-studio" className="text-[12px] font-medium text-black/50 hover:text-black">← Design Studio</a>
+            <div className="flex flex-wrap items-center gap-4">
+              <a href="#/design-studio" className="text-[12px] font-medium text-black/50 hover:text-black">← Design Studio</a>
+              <PreviewSwitch current="next" />
+            </div>
             <p className="flex items-center gap-2 text-[18px] font-semibold tracking-[-.01em]">Quaran · Next generation <span className="rounded-full bg-[#dcefe2] px-2 py-0.5 text-[10.5px] font-semibold tracking-wide text-[#2f7d4f]">DESIGN PREVIEW · AWAITING APPROVAL</span></p>
           </div>
           <div className="ms-auto flex flex-wrap items-center gap-4 text-[12px] text-black/55">
@@ -106,12 +110,14 @@ export default function NextPreview() {
               <span className="min-w-0"><span className="block text-[13.5px] font-medium">{p.en}</span><span className="block text-[12px] text-black/45" dir="rtl" style={{ fontFamily: "'IBM Plex Sans Arabic'" }}>{p.ar}</span></span>
             </button>
           ))}
+          <MushafEntry className="mt-4" />
         </nav>
 
         <main className="min-w-0 flex-1">
           <div className="mb-6 lg:hidden">
-            <select value={page} onChange={(e) => { const v = e.target.value as Page; setPage(v); if (v !== 'themes' && v !== 'system') setNav({ screen: v }) }} className="h-11 w-full rounded-full bg-white px-4 ring-1 ring-black/10">
+            <select value={page} onChange={(e) => { if (e.target.value === 'mushaf') return (location.hash = MUSHAF_HREF, toTop()); const v = e.target.value as Page; setPage(v); if (v !== 'themes' && v !== 'system') setNav({ screen: v }) }} className="h-11 w-full rounded-full bg-white px-4 ring-1 ring-black/10">
               {PAGES.map((p) => <option key={p.id} value={p.id}>{p.n} · {p.en} · {p.ar}</option>)}
+              <option value="mushaf">↗ Digital Mushaf – المصحف الرقمي (separate preview)</option>
             </select>
           </div>
           <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -120,6 +126,7 @@ export default function NextPreview() {
               <h1 className="text-[30px] font-semibold tracking-[-.02em]">{info.en} <span className="ms-2 text-[22px] font-medium text-black/45" dir="rtl" style={{ fontFamily: "'IBM Plex Sans Arabic'" }}>{info.ar}</span></h1>
               <p className="mt-2 max-w-[820px] text-[14px] leading-relaxed text-black/60">{info.note}</p>
             </div>
+            {page === 'home' && <MushafEntry className="w-full max-w-[300px]" />}
           </div>
 
           {page === 'themes' ? (
@@ -148,6 +155,21 @@ function Seg<T extends string>({ v, set, opts }: { v: T; set: (t: T) => void; op
         <button key={k} type="button" onClick={() => set(k)} aria-pressed={v === k} className={`h-8 rounded-full px-3.5 ${v === k ? 'bg-white font-semibold text-black shadow-[0_1px_3px_rgba(0,0,0,.12)]' : 'text-black/55 hover:text-black'}`}>{l}</button>
       ))}
     </div>
+  )
+}
+
+/** Link to the separate, approved Phase 1 Mushaf preview (unchanged design). */
+function MushafEntry({ className = '' }: { className?: string }) {
+  return (
+    <a href={MUSHAF_HREF} onClick={toTop} className={`group flex items-center gap-3 rounded-[16px] bg-[#16181d] p-3.5 text-white shadow-[0_10px_24px_-16px_rgba(0,0,0,.6)] ${className}`}>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-white/10"><Icon name="book" size={20} /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13.5px] font-semibold">Digital Mushaf</span>
+        <span className="block text-[12.5px] text-white/65" dir="rtl" style={{ fontFamily: "'IBM Plex Sans Arabic'" }}>المصحف الرقمي</span>
+        <span className="mt-1 block text-[10.5px] font-semibold tracking-wide text-[#8fd1a8]">PHASE 1 · APPROVED · SEPARATE PREVIEW</span>
+      </span>
+      <span aria-hidden className="text-[16px] text-white/50 transition group-hover:translate-x-0.5 group-hover:text-white">→</span>
+    </a>
   )
 }
 
