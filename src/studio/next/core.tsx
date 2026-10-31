@@ -8,7 +8,7 @@ export function Icon({ name, size = 22, className = '', fill = false }: { name: 
   return <I n={name} s={size} className={className} fill={fill} />
 }
 
-export type ScreenId = 'home' | 'ayah' | 'map' | 'library' | 'kids' | 'week' | 'recite' | 'azkar' | 'azkar-list'
+export type ScreenId = 'home' | 'mushaf' | 'ayah' | 'map' | 'library' | 'kids' | 'week' | 'recite' | 'azkar' | 'azkar-list'
 export type Device = 'mobile' | 'desktop'
 export type Nav = { screen: ScreenId; param?: string }
 
@@ -103,11 +103,12 @@ export function PhoneShell({ look, kids = false, children }: { look: Look; kids?
 
 export const NAV: { id: ScreenId; icon: string; ar: string; dock?: boolean }[] = [
   { id: 'home', icon: 'home', ar: 'رحلتك اليوم', dock: true },
+  { id: 'mushaf', icon: 'book', ar: 'المصحف', dock: true },
   { id: 'ayah', icon: 'sparkle', ar: 'رحلة الآية', dock: true },
   { id: 'map', icon: 'path', ar: 'خريطة الرحلة', dock: true },
   { id: 'azkar', icon: 'sun', ar: 'أذكاري', dock: true },
   { id: 'week', icon: 'calendar', ar: 'خطة الأسبوع' },
-  { id: 'library', icon: 'book', ar: 'مكتبة إنجازاتي' },
+  { id: 'library', icon: 'layers', ar: 'مكتبة إنجازاتي' },
   { id: 'recite', icon: 'mic', ar: 'رحلة التسميع' },
   { id: 'kids', icon: 'star', ar: 'عالم الأطفال' },
 ]

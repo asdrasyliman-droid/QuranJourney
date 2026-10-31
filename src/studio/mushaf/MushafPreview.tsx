@@ -8,7 +8,6 @@ import { I } from '../kit'
 import { AyahMenu, DesktopReader, IconBtn, JumpControl, ModeSwitch, Progress, TurnBtn, type Mode, type Tone } from './desktop'
 import { MobileReader } from './mobile'
 import { Bookmark, PageNumber, PageText, Rosette, SAMPLE_PAGES, SurahBanner, toAr, usePage, type Marks, type PageData } from './page'
-import { PreviewSwitch } from '../PreviewSwitch'
 
 /** Scales a fixed-size artboard to the available width (keeps true proportions). */
 function Fit({ w, h, children }: { w: number; h: number; children: ReactNode }) {
@@ -95,7 +94,7 @@ export default function MushafPreview() {
           <div>
             <div className="flex flex-wrap items-center gap-4">
               <a href="#/design-studio" className="text-[12px] font-medium text-black/50 hover:text-black">← Design Studio</a>
-              <PreviewSwitch current="mushaf" />
+              <a href="#/design-studio/next?screen=mushaf" onClick={() => scrollTo({ top: 0 })} className="rounded-full bg-black/[.06] px-3.5 py-1.5 text-[12.5px] font-medium text-black/65 hover:bg-black/10 hover:text-black">View inside the Next generation preview →</a>
             </div>
             <div className="mt-3 flex items-center gap-3">
               <span className="rounded-full bg-[#dcefe2] px-2.5 py-1 text-[11px] font-semibold tracking-wide text-[#2f7d4f]">PHASE 1 · DESIGN PREVIEW</span>

@@ -5,7 +5,8 @@ import { MushafPage, PageNumber, PageSkeleton, PageText, SAMPLE_PAGES, SurahBann
 import { BISMILLAH_HAFS } from '../../lib/quran'
 
 export type Mode = 'mushaf' | 'ayah' | 'flow'
-export type Tone = 'ivory' | 'sand' | 'night'
+/** 'app' derives every paper/chrome token from the active palette + appearance (used inside the Next-generation preview). */
+export type Tone = 'ivory' | 'sand' | 'night' | 'app'
 export const MODES: { id: Mode; l: string; icon: string }[] = [
   { id: 'mushaf', l: 'مصحف', icon: 'book' },
   { id: 'ayah', l: 'آية بآية', icon: 'layers' },
@@ -109,11 +110,11 @@ export function AyahMenu({ s, a, style, caret = 'bottom', onClose }: { s: number
   )
 }
 
-function Toolbar({ d, mode, setMode, bookmarked, setBookmarked, settings, setSettings }: { d: PageData | null; mode: Mode; setMode: (m: Mode) => void; bookmarked: boolean; setBookmarked: (b: boolean) => void; settings: boolean; setSettings: (b: boolean) => void }) {
+function Toolbar({ d, mode, setMode, bookmarked, setBookmarked, settings, setSettings, onBack }: { d: PageData | null; mode: Mode; setMode: (m: Mode) => void; bookmarked: boolean; setBookmarked: (b: boolean) => void; settings: boolean; setSettings: (b: boolean) => void; onBack?: () => void }) {
   return (
     <header className="mp-glass relative z-30 flex h-16 shrink-0 items-center gap-4 px-5" style={{ borderRadius: 0 }}>
       <div className="flex min-w-[260px] items-center gap-2">
-        <IconBtn n="chevron" label="رجوع" />
+        <IconBtn n="chevron" label="رجوع" onClick={onBack} />
         <div className="leading-tight">
           <p className="text-[15px] font-semibold">{d ? surahName(d.surahs[0]) : '—'}</p>
           <p className="text-[12px] text-(--ui-muted)">{d ? `${juzName(d.juz)} · الحزب ${toAr(d.hizb)}` : ''}</p>
@@ -132,8 +133,9 @@ function Toolbar({ d, mode, setMode, bookmarked, setBookmarked, settings, setSet
   )
 }
 
-export function SettingsPanel({ tone, setTone, size, setSize, mode, setMode, className = '' }: { tone: Tone; setTone: (t: Tone) => void; size: number; setSize: (n: number) => void; mode: Mode; setMode: (m: Mode) => void; className?: string }) {
+export function SettingsPanel({ tone, setTone, size, setSize, mode, setMode, auto = false, className = '' }: { tone: Tone; setTone: (t: Tone) => void; size: number; setSize: (n: number) => void; mode: Mode; setMode: (m: Mode) => void; auto?: boolean; className?: string }) {
   const tones: { id: Tone; l: string; bg: string; ink: string }[] = [
+    ...(auto ? [{ id: 'app' as const, l: 'تلقائي', bg: 'var(--mf-paper)', ink: 'var(--mf-ink)' }] : []),
     { id: 'ivory', l: 'عاجي', bg: '#fbf7ec', ink: '#1d1913' },
     { id: 'sand', l: 'رملي', bg: '#f4e8cf', ink: '#241b10' },
     { id: 'night', l: 'ليلي', bg: '#161d19', ink: '#ede4cf' },
@@ -153,7 +155,7 @@ export function SettingsPanel({ tone, setTone, size, setSize, mode, setMode, cla
       </div>
       <div>
         <p className="mb-2.5 text-[12.5px] font-semibold text-(--ui-muted)">لون الورق</p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className={`grid gap-2 ${auto ? 'grid-cols-4' : 'grid-cols-3'}`}>
           {tones.map((t) => (
             <button key={t.id} type="button" onClick={() => setTone(t.id)} aria-pressed={tone === t.id} className={`mp-press rounded-[16px] p-1 ring-2 ${tone === t.id ? 'ring-(--accent)' : 'ring-transparent hover:ring-(--ui-line)'}`}>
               <span className="mp-text flex h-14 items-center justify-center rounded-[12px] text-[20px] shadow-[inset_0_0_0_1px_rgba(0,0,0,.08)]" style={{ background: t.bg, color: t.ink, textAlignLast: 'center' }}>
@@ -189,7 +191,7 @@ function Toggle({ l, on: init = false }: { l: string; on?: boolean }) {
   )
 }
 
-export function DesktopReader({ pg, setPg, tone, setTone }: { pg: number; setPg: (n: number) => void; tone: Tone; setTone: (t: Tone) => void }) {
+export function DesktopReader({ pg, setPg, tone, setTone, auto, onBack }: { pg: number; setPg: (n: number) => void; tone: Tone; setTone: (t: Tone) => void; auto?: boolean; onBack?: () => void }) {
   const d = usePage(pg)
   const next = usePage(Math.min(604, pg + 1))
   const [mode, setMode] = useState<Mode>('mushaf')
@@ -212,7 +214,7 @@ export function DesktopReader({ pg, setPg, tone, setTone }: { pg: number; setPg:
 
   return (
     <div className="mp-canvas relative flex h-full flex-col" dir="rtl">
-      <Toolbar d={d} mode={mode} setMode={(m) => (setMode(m), setSel(null))} bookmarked={bookmarked} setBookmarked={setBookmarked} settings={settings} setSettings={setSettings} />
+      <Toolbar d={d} mode={mode} setMode={(m) => (setMode(m), setSel(null))} bookmarked={bookmarked} setBookmarked={setBookmarked} settings={settings} setSettings={setSettings} onBack={onBack} />
       <div ref={area} className="mp-scroll relative min-h-0 flex-1 overflow-y-auto" onClick={(e) => e.target === e.currentTarget && setSel(null)}>
         {mode === 'mushaf' && (
           <div className="flex items-center justify-center gap-10 px-10 py-7" onClick={(e) => e.target === e.currentTarget && setSel(null)}>
@@ -235,7 +237,7 @@ export function DesktopReader({ pg, setPg, tone, setTone }: { pg: number; setPg:
             <h3 className="text-[16px] font-semibold">إعدادات القراءة</h3>
             <IconBtn n="x" label="إغلاق" size={32} onClick={() => setSettings(false)} />
           </div>
-          <SettingsPanel tone={tone} setTone={setTone} size={size} setSize={setSize} mode={mode} setMode={setMode} />
+          <SettingsPanel tone={tone} setTone={setTone} size={size} setSize={setSize} mode={mode} setMode={setMode} auto={auto} />
         </div>
       )}
 

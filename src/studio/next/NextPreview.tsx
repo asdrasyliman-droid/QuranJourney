@@ -13,26 +13,31 @@ import { KidsHouse } from './screens/kids'
 import { WeekRoadmap } from './screens/week'
 import { ReciteJourney } from './screens/recite'
 import { AzkarHome, AzkarList } from './screens/azkar'
+import { DigitalMushaf, MUSHAF_DEFAULT, MushafCtx, type MushafState } from './screens/mushaf'
+import { SAMPLE_PAGES } from '../mushaf/page'
+import type { MobileView } from '../mushaf/mobile'
+import type { Tone } from '../mushaf/desktop'
 import { PALETTES } from '../../lib/theme'
-import { MUSHAF_HREF, PreviewSwitch, toTop } from '../PreviewSwitch'
 
 type Page = ScreenId | 'themes' | 'system'
 const PAGES: { id: Page; n: string; en: string; ar: string; note: string }[] = [
   { id: 'home', n: '01', en: 'Unified home', ar: 'رحلتك اليوم', note: 'Three daily journeys (Quran · Azkar by local time · Tadabbur) as one calm trio, then at most four cards: today’s plan tasks, Azkar, an ayah to reflect on (real text, chosen by date) and recent achievements. Rings are computed from the demo plan log, not typed percentages.' },
-  { id: 'ayah', n: '02', en: 'Ayah Journey', ar: 'رحلة الآية', note: 'Vertical snap feed, one ayah per screen (Al-Mulk 1–5, real Hafs text and EveryAyah audio). Four connected experiences: Read & listen, Understand & reflect (verified Tafsir fetched verbatim with book and author, visually separate from the personal journal), Memorise (6 steps; only “أتقنتها” records an ayah as memorised) and Connect ayat (meaning chain, what-comes-next drill, blind recitation). Session intent: memorisation, reflection or both. Desktop keeps the experience in a persistent side panel.' },
-  { id: 'map', n: '03', en: 'Quran Journey Map', ar: 'خريطة رحلة القرآن', note: '30 isometric stations on a serpentine road (RTL: starts top-right). Plinth height + glow encode state: leaf = complete, gold = in progress (front strip = real ratio), neutral = not started. Station detail: real Juz range, memorised/total and % computed from demo ayah records.' },
-  { id: 'library', n: '04', en: 'Achievements Library', ar: 'مكتبة إنجازاتي', note: 'Isometric bookcase, six shelves × five Juz books. A book lights fully only when every ayah is recorded; in-progress spines fill to the true ratio; untouched books are ghost outlines that “appear” as you begin. No streaks, ranks or comparisons.' },
-  { id: 'kids', n: '05', en: 'Kids Learning House', ar: 'عالم الأطفال', note: 'Open-top isometric house with five rooms whose furniture tells the lesson (board of letters, harakat poster, joining blocks, reading corner, rahl + lantern). Rendered with the production Kids tokens (data-kids, kid-1…5). Rooms open the existing lessons in Kids.tsx; inventories come from kidsData.ts.' },
-  { id: 'week', n: '06', en: 'Weekly Roadmap', ar: 'خريطة خطط الأسبوع', note: 'Seven day-stations over the existing plan model (kind, study weekdays, daily units). Task tiles on each plinth light when complete. A weekday with no study day in any plan is a rest day: sky-toned, crescent, never shown as missed.' },
-  { id: 'recite', n: '07', en: 'Recitation Journey', ar: 'رحلة التسميع', note: 'Six-stage pipeline and all seven status variations. The engine pill is the real status from lib/useEngine; when offline the screen defaults to “unavailable” with honest alternatives. The completed state is a display template only and says so.' },
-  { id: 'azkar', n: '08', en: 'Azkari', ar: 'أذكاري', note: 'Six category groups; the hero card picks morning or evening from the device clock. Text, counts, references and grades are placeholders until a verified corpus is added.' },
-  { id: 'azkar-list', n: '09', en: 'Individual Azkar', ar: 'بطاقات الأذكار', note: 'Card anatomy: text, verified count, large thumb-reach counter with remaining repetitions, source, grade, favourite and completion. Counts shown are labelled demo numbers so the counter can be tried.' },
-  { id: 'themes', n: '10', en: 'Theme variations', ar: 'تنويعات المظهر', note: 'The same screens under every production palette in light and dark. Each frame carries data-palette / data-theme exactly as <html> does in the app.' },
-  { id: 'system', n: '11', en: 'Design system & review', ar: 'النظام والمراجعة', note: 'Sakina tokens as implemented (see src/studio/next/DESIGN.md) and a critical design review of this preview.' },
+  { id: 'mushaf', n: '02', en: 'Digital Mushaf', ar: 'المصحف الرقمي', note: 'The approved Phase 1 Mushaf design, unchanged and hosted here as part of the product (same reader components as #/design-studio/mushaf). Real KFGQPC Hafs text on its Madinah page ranges; page turning moves between the sample pages. “Theme” paper follows the selected palette and Light / Dark / System; Ivory, Sand and Night are the fixed paper tones from the Phase 1 settings. Click an ayah for its menu; on mobile tap the page to hide or show the tools, and use the dock (page pill, listen, Aa).' },
+  { id: 'ayah', n: '03', en: 'Ayah Journey', ar: 'رحلة الآية', note: 'Vertical snap feed, one ayah per screen (Al-Mulk 1–5, real Hafs text and EveryAyah audio). Four connected experiences: Read & listen, Understand & reflect (verified Tafsir fetched verbatim with book and author, visually separate from the personal journal), Memorise (6 steps; only “أتقنتها” records an ayah as memorised) and Connect ayat (meaning chain, what-comes-next drill, blind recitation). Session intent: memorisation, reflection or both. Desktop keeps the experience in a persistent side panel.' },
+  { id: 'map', n: '04', en: 'Quran Journey Map', ar: 'خريطة رحلة القرآن', note: '30 isometric stations on a serpentine road (RTL: starts top-right). Plinth height + glow encode state: leaf = complete, gold = in progress (front strip = real ratio), neutral = not started. Station detail: real Juz range, memorised/total and % computed from demo ayah records.' },
+  { id: 'library', n: '05', en: 'Achievements Library', ar: 'مكتبة إنجازاتي', note: 'Isometric bookcase, six shelves × five Juz books. A book lights fully only when every ayah is recorded; in-progress spines fill to the true ratio; untouched books are ghost outlines that “appear” as you begin. No streaks, ranks or comparisons.' },
+  { id: 'kids', n: '06', en: 'Kids Learning House', ar: 'عالم الأطفال', note: 'Open-top isometric house with five rooms whose furniture tells the lesson (board of letters, harakat poster, joining blocks, reading corner, rahl + lantern). Rendered with the production Kids tokens (data-kids, kid-1…5). Rooms open the existing lessons in Kids.tsx; inventories come from kidsData.ts.' },
+  { id: 'week', n: '07', en: 'Weekly Roadmap', ar: 'خريطة خطط الأسبوع', note: 'Seven day-stations over the existing plan model (kind, study weekdays, daily units). Task tiles on each plinth light when complete. A weekday with no study day in any plan is a rest day: sky-toned, crescent, never shown as missed.' },
+  { id: 'recite', n: '08', en: 'Recitation Journey', ar: 'رحلة التسميع', note: 'Six-stage pipeline and all seven status variations. The engine pill is the real status from lib/useEngine; when offline the screen defaults to “unavailable” with honest alternatives. The completed state is a display template only and says so.' },
+  { id: 'azkar', n: '09', en: 'Azkari', ar: 'أذكاري', note: 'Six category groups; the hero card picks morning or evening from the device clock. Text, counts, references and grades are placeholders until a verified corpus is added.' },
+  { id: 'azkar-list', n: '10', en: 'Individual Azkar', ar: 'بطاقات الأذكار', note: 'Card anatomy: text, verified count, large thumb-reach counter with remaining repetitions, source, grade, favourite and completion. Counts shown are labelled demo numbers so the counter can be tried.' },
+  { id: 'themes', n: '11', en: 'Theme variations', ar: 'تنويعات المظهر', note: 'The same screens under every production palette in light and dark. Each frame carries data-palette / data-theme exactly as <html> does in the app.' },
+  { id: 'system', n: '12', en: 'Design system & review', ar: 'النظام والمراجعة', note: 'Sakina tokens as implemented (see src/studio/next/DESIGN.md) and a critical design review of this preview.' },
 ]
 
 const SCREENS: Record<ScreenId, () => ReactNode> = {
   home: () => <HomeDashboard />,
+  mushaf: () => <DigitalMushaf />,
   ayah: () => <AyahJourney />,
   map: () => <JourneyMap />,
   library: () => <Library />,
@@ -65,8 +70,15 @@ function Frame({ nav, go, device, look }: { nav: Nav; go: (s: ScreenId, p?: stri
 export default function NextPreview() {
   useScopedThemes()
   const sys = useSysDark()
-  const [page, setPage] = useState<Page>('home')
-  const [nav, setNav] = useState<Nav>({ screen: 'home' })
+  // Optional deep link, e.g. #/design-studio/next?screen=mushaf (stays on this route).
+  const [initial] = useState<Page>(() => {
+    const q = new URLSearchParams(location.hash.split('?')[1] ?? '').get('screen')
+    return PAGES.some((p) => p.id === q) ? (q as Page) : 'home'
+  })
+  const [page, setPage] = useState<Page>(initial)
+  const [nav, setNav] = useState<Nav>({ screen: initial === 'themes' || initial === 'system' ? 'home' : initial })
+  const [mushaf, setMushaf] = useState<MushafState>(MUSHAF_DEFAULT)
+  const mushafCtx = { s: mushaf, set: (p: Partial<MushafState>) => setMushaf((m) => ({ ...m, ...p })) }
   const [palette, setPalette] = useState('garden')
   const [mode, setMode] = useState<'light' | 'dark' | 'system'>('light')
   const [device, setDevice] = useState<'both' | Device>('both')
@@ -78,14 +90,12 @@ export default function NextPreview() {
   const info = PAGES.find((p) => p.id === page)!
 
   return (
+    <MushafCtx.Provider value={mushafCtx}>
     <div className="min-h-screen bg-[#f4f3ef] font-['Inter',system-ui,sans-serif] text-[#16181d]" dir="ltr">
       <header className="sticky top-0 z-40 border-b border-black/10 bg-[#f4f3ef]/90 backdrop-blur">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-6 gap-y-3 px-6 py-4">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-4">
-              <a href="#/design-studio" className="text-[12px] font-medium text-black/50 hover:text-black">← Design Studio</a>
-              <PreviewSwitch current="next" />
-            </div>
+            <a href="#/design-studio" className="text-[12px] font-medium text-black/50 hover:text-black">← Design Studio</a>
             <p className="flex items-center gap-2 text-[18px] font-semibold tracking-[-.01em]">Quaran · Next generation <span className="rounded-full bg-[#dcefe2] px-2 py-0.5 text-[10.5px] font-semibold tracking-wide text-[#2f7d4f]">DESIGN PREVIEW · AWAITING APPROVAL</span></p>
           </div>
           <div className="ms-auto flex flex-wrap items-center gap-4 text-[12px] text-black/55">
@@ -110,14 +120,12 @@ export default function NextPreview() {
               <span className="min-w-0"><span className="block text-[13.5px] font-medium">{p.en}</span><span className="block text-[12px] text-black/45" dir="rtl" style={{ fontFamily: "'IBM Plex Sans Arabic'" }}>{p.ar}</span></span>
             </button>
           ))}
-          <MushafEntry className="mt-4" />
         </nav>
 
         <main className="min-w-0 flex-1">
           <div className="mb-6 lg:hidden">
-            <select value={page} onChange={(e) => { if (e.target.value === 'mushaf') return (location.hash = MUSHAF_HREF, toTop()); const v = e.target.value as Page; setPage(v); if (v !== 'themes' && v !== 'system') setNav({ screen: v }) }} className="h-11 w-full rounded-full bg-white px-4 ring-1 ring-black/10">
+            <select value={page} onChange={(e) => { const v = e.target.value as Page; setPage(v); if (v !== 'themes' && v !== 'system') setNav({ screen: v }) }} className="h-11 w-full rounded-full bg-white px-4 ring-1 ring-black/10">
               {PAGES.map((p) => <option key={p.id} value={p.id}>{p.n} · {p.en} · {p.ar}</option>)}
-              <option value="mushaf">↗ Digital Mushaf – المصحف الرقمي (separate preview)</option>
             </select>
           </div>
           <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -126,7 +134,7 @@ export default function NextPreview() {
               <h1 className="text-[30px] font-semibold tracking-[-.02em]">{info.en} <span className="ms-2 text-[22px] font-medium text-black/45" dir="rtl" style={{ fontFamily: "'IBM Plex Sans Arabic'" }}>{info.ar}</span></h1>
               <p className="mt-2 max-w-[820px] text-[14px] leading-relaxed text-black/60">{info.note}</p>
             </div>
-            {page === 'home' && <MushafEntry className="w-full max-w-[300px]" />}
+            {page === 'mushaf' && <MushafControls s={mushaf} set={mushafCtx.set} device={device} />}
           </div>
 
           {page === 'themes' ? (
@@ -145,6 +153,7 @@ export default function NextPreview() {
         </main>
       </div>
     </div>
+    </MushafCtx.Provider>
   )
 }
 
@@ -158,18 +167,26 @@ function Seg<T extends string>({ v, set, opts }: { v: T; set: (t: T) => void; op
   )
 }
 
-/** Link to the separate, approved Phase 1 Mushaf preview (unchanged design). */
-function MushafEntry({ className = '' }: { className?: string }) {
+/** Review controls for the Mushaf screen; both device frames share this state. */
+function MushafControls({ s, set, device }: { s: MushafState; set: (p: Partial<MushafState>) => void; device: 'both' | Device }) {
+  const views: [MobileView, string][] = [['reading', 'Reading'], ['immersive', 'Immersive'], ['playing', 'Playing'], ['ayah', 'Ayah'], ['nav', 'Go to'], ['settings', 'Settings']]
   return (
-    <a href={MUSHAF_HREF} onClick={toTop} className={`group flex items-center gap-3 rounded-[16px] bg-[#16181d] p-3.5 text-white shadow-[0_10px_24px_-16px_rgba(0,0,0,.6)] ${className}`}>
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-white/10"><Icon name="book" size={20} /></span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[13.5px] font-semibold">Digital Mushaf</span>
-        <span className="block text-[12.5px] text-white/65" dir="rtl" style={{ fontFamily: "'IBM Plex Sans Arabic'" }}>المصحف الرقمي</span>
-        <span className="mt-1 block text-[10.5px] font-semibold tracking-wide text-[#8fd1a8]">PHASE 1 · APPROVED · SEPARATE PREVIEW</span>
+    <div className="grid grid-cols-[auto_auto] items-center justify-start gap-x-3 gap-y-2.5 text-[12px] text-black/50">
+      <span>Paper</span>
+      <span><Seg v={s.tone} set={(tone: Tone) => set({ tone })} opts={[['app', 'Theme'], ['ivory', 'Ivory'], ['sand', 'Sand'], ['night', 'Night']]} /></span>
+      <span>Sample page</span>
+      <span className="inline-flex flex-wrap gap-1">
+        {SAMPLE_PAGES.map((p) => (
+          <button key={p} type="button" onClick={() => set({ pg: p })} aria-pressed={p === s.pg} className={`h-8 min-w-8 rounded-full px-2.5 text-[13px] tabular-nums ${p === s.pg ? 'bg-[#16181d] font-semibold text-white' : 'bg-black/[.05] text-black/65 hover:bg-black/[.09]'}`}>{p}</button>
+        ))}
       </span>
-      <span aria-hidden className="text-[16px] text-white/50 transition group-hover:translate-x-0.5 group-hover:text-white">→</span>
-    </a>
+      {device !== 'desktop' && (
+        <>
+          <span>Mobile state</span>
+          <span><Seg v={s.view} set={(view: MobileView) => set({ view })} opts={views} /></span>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -179,7 +196,7 @@ function ThemeBoard() {
   return (
     <div>
       <div className="mb-6 flex flex-wrap gap-2">
-        {(['home', 'ayah', 'map', 'library', 'azkar'] as ScreenId[]).map((s) => (
+        {(['home', 'mushaf', 'ayah', 'map', 'library', 'azkar'] as ScreenId[]).map((s) => (
           <button key={s} type="button" onClick={() => setScreen(s)} className={`h-9 rounded-full px-4 text-[13px] ${screen === s ? 'bg-black text-white' : 'bg-white ring-1 ring-black/10'}`}>{PAGES.find((p) => p.id === s)!.en}</button>
         ))}
       </div>
@@ -193,7 +210,7 @@ function ThemeBoard() {
                   <div className="relative overflow-hidden" style={{ width: 390 * 0.62, height: 844 * 0.62 }}>
                     <div className="pointer-events-none absolute left-0 top-0 origin-top-left" style={{ transform: 'scale(.62)' }} inert>
                       <PhoneShell look={{ palette: p.id, dark }}>
-                        <ProtoCtx.Provider value={{ nav: { screen }, go: noop, device: 'mobile' }}>{SCREENS[screen]()}</ProtoCtx.Provider>
+                        <MushafCtx.Provider value={{ s: MUSHAF_DEFAULT, set: noop }}><ProtoCtx.Provider value={{ nav: { screen }, go: noop, device: 'mobile' }}>{SCREENS[screen]()}</ProtoCtx.Provider></MushafCtx.Provider>
                       </PhoneShell>
                     </div>
                   </div>

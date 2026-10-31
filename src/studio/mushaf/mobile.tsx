@@ -27,10 +27,10 @@ export function Phone({ children, label }: { children: ReactNode; label?: string
   )
 }
 
-function TopBar({ d, bookmarked }: { d: PageData; bookmarked?: boolean }) {
+function TopBar({ d, bookmarked, onBack }: { d: PageData; bookmarked?: boolean; onBack?: () => void }) {
   return (
     <div className="mp-glass absolute inset-x-0 top-0 z-30 flex h-[100px] items-end gap-1 px-3 pb-2" style={{ borderRadius: 0 }}>
-      <IconBtn n="chevron" label="رجوع" size={44} />
+      <IconBtn n="chevron" label="رجوع" size={44} onClick={onBack} />
       <div className="min-w-0 flex-1 pb-0.5 text-center leading-tight">
         <p className="truncate text-[15px] font-semibold">{surahName(d.surahs[0])}</p>
         <p className="text-[11.5px] text-(--ui-muted)">{juzName(d.juz)} · الحزب {toAr(d.hizb)}</p>
@@ -41,25 +41,25 @@ function TopBar({ d, bookmarked }: { d: PageData; bookmarked?: boolean }) {
 }
 
 /** Bottom reading dock: thumb-reachable page turn + page pill + audio + text settings. */
-function Dock({ pg, onPill, playing }: { pg: number; onPill?: () => void; playing?: string }) {
+function Dock({ pg, onPill, playing, onPg, onPlay, onSettings }: { pg: number; onPill?: () => void; playing?: string; onPg?: (n: number) => void; onPlay?: () => void; onSettings?: () => void }) {
   const i = SAMPLE_PAGES.indexOf(pg)
   return (
     <div className="absolute inset-x-0 bottom-0 z-30 px-3 pb-7">
       {playing && <MiniPlayer at={playing} />}
       <div className="mp-glass flex h-[64px] items-center gap-1 rounded-full px-2">
-        <button type="button" aria-label="الصفحة السابقة" disabled={i <= 0} className="mp-press flex h-12 w-12 items-center justify-center rounded-full text-(--ui-ink) hover:bg-(--ui-ink)/[.06] disabled:opacity-30">
+        <button type="button" aria-label="الصفحة السابقة" disabled={i <= 0} onClick={() => onPg?.(SAMPLE_PAGES[i - 1])} className="mp-press flex h-12 w-12 items-center justify-center rounded-full text-(--ui-ink) hover:bg-(--ui-ink)/[.06] disabled:opacity-30">
           <I n="chevron" s={22} />
         </button>
         <button type="button" onClick={onPill} className="mp-press flex h-12 flex-1 flex-col items-center justify-center rounded-full bg-(--ui-ink)/[.05] leading-tight">
           <span className="text-[15px] font-semibold tabular-nums">{toAr(pg)} <span className="font-normal text-(--ui-muted)">/ ٦٠٤</span></span>
           <span className="text-[10.5px] text-(--ui-muted)">اضغط للانتقال</span>
         </button>
-        <button type="button" aria-label="الصفحة التالية" className="mp-press flex h-12 w-12 items-center justify-center rounded-full text-(--ui-ink) hover:bg-(--ui-ink)/[.06]">
+        <button type="button" aria-label="الصفحة التالية" disabled={!!onPg && i >= SAMPLE_PAGES.length - 1} onClick={() => onPg?.(SAMPLE_PAGES[i + 1])} className="mp-press flex h-12 w-12 items-center justify-center rounded-full text-(--ui-ink) hover:bg-(--ui-ink)/[.06] disabled:opacity-30">
           <I n="chevron" s={22} className="rotate-180" />
         </button>
         <span className="mx-0.5 h-7 w-px bg-(--ui-line)" />
-        <IconBtn n={playing ? 'pause' : 'play'} label="استماع" size={48} on={!!playing} />
-        <IconBtn n="type" label="إعدادات القراءة" size={48} />
+        <IconBtn n={playing ? 'pause' : 'play'} label="استماع" size={48} on={!!playing} onClick={onPlay} />
+        <IconBtn n="type" label="إعدادات القراءة" size={48} onClick={onSettings} />
       </div>
     </div>
   )
@@ -83,17 +83,17 @@ function MiniPlayer({ at }: { at: string }) {
   )
 }
 
-export function Sheet({ title, children, h }: { title: string; children: ReactNode; h?: number }) {
+export function Sheet({ title, children, h, onClose }: { title: string; children: ReactNode; h?: number; onClose?: () => void }) {
   return (
     <>
-      <div className="absolute inset-0 z-40 bg-black/30" />
+      <div className="absolute inset-0 z-40 bg-black/30" onClick={onClose} />
       <div className="absolute inset-x-0 bottom-0 z-40 rounded-t-[30px] bg-(--ui-card) px-5 pb-10 pt-2.5 shadow-[0_-20px_50px_-20px_rgba(0,0,0,.4)]" style={{ height: h }}>
         <span className="mx-auto mb-3 block h-[5px] w-10 rounded-full bg-(--ui-ink)/15" />
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-[17px] font-semibold">{title}</h3>
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-(--ui-ink)/[.06] text-(--ui-muted)">
+          <button type="button" onClick={onClose} aria-label="إغلاق" className="flex h-8 w-8 items-center justify-center rounded-full bg-(--ui-ink)/[.06] text-(--ui-muted)">
             <I n="x" s={15} />
-          </span>
+          </button>
         </div>
         {children}
       </div>
@@ -101,10 +101,10 @@ export function Sheet({ title, children, h }: { title: string; children: ReactNo
   )
 }
 
-export function NavSheet({ pg }: { pg: number }) {
+export function NavSheet({ pg, onClose }: { pg: number; onClose?: () => void }) {
   const [tab, setTab] = useState<'page' | 'surah' | 'juz'>('page')
   return (
-    <Sheet title="الانتقال في المصحف" h={560}>
+    <Sheet title="الانتقال في المصحف" h={560} onClose={onClose}>
       <div role="tablist" className="mb-5 grid grid-cols-3 rounded-full bg-(--ui-ink)/[.06] p-1 text-[13.5px]">
         {([['page', 'صفحة'], ['surah', 'سورة'], ['juz', 'جزء']] as const).map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`mp-press h-9 rounded-full ${tab === k ? 'bg-(--ui-card) font-semibold shadow-[0_1px_3px_rgba(0,0,0,.12)]' : 'text-(--ui-muted)'}`}>{l}</button>
@@ -160,9 +160,9 @@ export function NavSheet({ pg }: { pg: number }) {
   )
 }
 
-export function AyahSheet({ s, a, text }: { s: number; a: number; text: string }) {
+export function AyahSheet({ s, a, text, onClose }: { s: number; a: number; text: string; onClose?: () => void }) {
   return (
-    <Sheet title={`${surahName(s)} · الآية ${toAr(a)}`}>
+    <Sheet title={`${surahName(s)} · الآية ${toAr(a)}`} onClose={onClose}>
       <p className="mp-paper mp-text rounded-[18px] px-5 py-4 text-[21px]" style={{ lineHeight: 2, textAlignLast: 'center' }}>
         {text} <span className="mp-num">{toAr(a)}</span>
       </p>
@@ -178,34 +178,59 @@ export function AyahSheet({ s, a, text }: { s: number; a: number; text: string }
   )
 }
 
-export function MobileReader({ pg, view, tone, setTone, label }: { pg: number; view: MobileView; tone: Tone; setTone: (t: Tone) => void; label: string }) {
+type Drive = {
+  /** Render without the standalone phone frame (the host supplies its own device shell). */
+  bare?: boolean
+  auto?: boolean
+  onView?: (v: MobileView) => void
+  onPg?: (n: number) => void
+  onBack?: () => void
+}
+
+export function MobileReader({ pg, view, tone, setTone, label, bare, auto, onView, onPg, onBack }: { pg: number; view: MobileView; tone: Tone; setTone: (t: Tone) => void; label: string } & Drive) {
   const d = usePage(pg)
   const [mode, setMode] = useState<Mode>('mushaf')
   const [size, setSize] = useState(1)
+  const [tap, setTap] = useState<{ s: number; a: number } | null>(null)
   const first = d?.blocks[0]
-  const pick = first?.ayat[Math.min(1, first.ayat.length - 1)]
+  const tapped = tap && d?.blocks.find((b) => b.s === tap.s)?.ayat.find((x) => x.a === tap.a)
+  const pickS = tapped ? tap.s : first?.s
+  const pick = tapped || first?.ayat[Math.min(1, first.ayat.length - 1)]
   const marks: Marks | undefined =
-    d && first && pick && (view === 'ayah' || view === 'playing') ? { state: { [`${first.s}:${pick.a}`]: view === 'ayah' ? 'selected' : 'playing' } } : undefined
+    d && pickS && pick && (view === 'ayah' || view === 'playing') ? { state: { [`${pickS}:${pick.a}`]: view === 'ayah' ? 'selected' : 'playing' } } : undefined
   const chrome = view !== 'immersive'
-  return (
-    <Phone label={label}>
-      <div className="mp-canvas absolute inset-0" dir="rtl">
-        {d && chrome && <TopBar d={d} />}
-        <div className={`mp-scroll absolute inset-0 overflow-y-auto px-2.5 ${chrome ? 'pb-[120px] pt-[108px]' : 'pb-10 pt-[52px]'}`}>
-          {d ? <MushafPage d={d} size={17 * size} compact marks={marks} /> : <PageSkeleton compact />}
-        </div>
-        {chrome && view !== 'nav' && view !== 'ayah' && view !== 'settings' && <Dock pg={pg} playing={view === 'playing' && first && pick ? `${SURAHS[first.s - 1].ar} ${toAr(pick.a)}` : undefined} />}
-        {view === 'immersive' && <span className="mp-glass absolute bottom-6 left-1/2 z-30 -translate-x-1/2 rounded-full px-3.5 py-1.5 text-[11.5px] text-(--ui-muted)">اضغط على الصفحة لإظهار الأدوات</span>}
-        {view === 'nav' && <NavSheet pg={pg} />}
-        {view === 'ayah' && first && pick && <AyahSheet s={first.s} a={pick.a} text={pick.t} />}
-        {view === 'settings' && (
-          <Sheet title="إعدادات القراءة">
-            <SettingsPanel tone={tone} setTone={setTone} size={size} setSize={setSize} mode={mode} setMode={setMode} />
-          </Sheet>
-        )}
+  const close = onView && (() => onView('reading'))
+  // Interactive only when a host drives it; the standalone preview stays a static state board.
+  const onAyah = onView && ((s: number, a: number) => (setTap({ s, a }), onView('ayah')))
+  // Tapping the page (not an ayah) shows / hides the reading chrome.
+  const toggleChrome = onView && ((e: React.MouseEvent) => !(e.target as HTMLElement).closest('.mp-ayah') && onView(chrome ? 'immersive' : 'reading'))
+  const body = (
+    <div className="mp-canvas absolute inset-0" dir="rtl">
+      {d && chrome && <TopBar d={d} onBack={onBack} />}
+      <div className={`mp-scroll absolute inset-0 overflow-y-auto px-2.5 ${chrome ? 'pb-[120px] pt-[108px]' : 'pb-10 pt-[52px]'}`} onClick={toggleChrome}>
+        {d ? <MushafPage d={d} size={17 * size} compact marks={marks} onAyah={onAyah} /> : <PageSkeleton compact />}
       </div>
-    </Phone>
+      {chrome && view !== 'nav' && view !== 'ayah' && view !== 'settings' && (
+        <Dock
+          pg={pg}
+          playing={view === 'playing' && pickS && pick ? `${SURAHS[pickS - 1].ar} ${toAr(pick.a)}` : undefined}
+          onPg={onPg && ((n) => (setTap(null), onPg(n)))}
+          onPill={onView && (() => onView('nav'))}
+          onPlay={onView && (() => onView(view === 'playing' ? 'reading' : 'playing'))}
+          onSettings={onView && (() => onView('settings'))}
+        />
+      )}
+      {view === 'immersive' && <span className="mp-glass pointer-events-none absolute bottom-6 left-1/2 z-30 -translate-x-1/2 rounded-full px-3.5 py-1.5 text-[11.5px] text-(--ui-muted)">اضغط على الصفحة لإظهار الأدوات</span>}
+      {view === 'nav' && <NavSheet pg={pg} onClose={close} />}
+      {view === 'ayah' && pickS && pick && <AyahSheet s={pickS} a={pick.a} text={pick.t} onClose={close} />}
+      {view === 'settings' && (
+        <Sheet title="إعدادات القراءة" onClose={close}>
+          <SettingsPanel tone={tone} setTone={setTone} size={size} setSize={setSize} mode={mode} setMode={setMode} auto={auto} />
+        </Sheet>
+      )}
+    </div>
   )
+  return bare ? body : <Phone label={label}>{body}</Phone>
 }
 
 export { ModeSwitch }
